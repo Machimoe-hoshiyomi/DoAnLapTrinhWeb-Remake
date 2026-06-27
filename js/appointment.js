@@ -19,8 +19,8 @@ document.getElementById("bookBtn").addEventListener("click", async () => {
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      userId: user.Id,
-      carId: Number(carId),
+      UserId: user.UserId,
+      CarId: Number(carId),
       AppointmentDate: date,
       CustomerNote: note
     })

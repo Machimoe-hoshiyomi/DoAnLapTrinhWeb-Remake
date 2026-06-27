@@ -129,66 +129,73 @@ async function deleteCar(id) {
 // LOAD APPOINTMENTS (LỊCH HẸN)
 // ====================\
 async function loadAppointments() {
-  const response = await fetch(API_APPOINTMENT);
-  const resultApp = await response.json();
-  const apps = resultApp.data;
+  try {
+    const response = await fetch(API_APPOINTMENT);
+    if (!response.ok) throw new Error("Không thể tải dữ liệu lịch hẹn");
+    
+    const apps = await response.json();
 
-  document.getElementById("totalAppointments").innerText = apps.length;
+    let done = 0;
+    let cancel = 0;
+    let html = "";
 
-  let done = 0;
-  let cancel = 0;
-  let html = "";
+    apps.forEach(app => {
+      // Đảm bảo tên biến khớp với JSON trả về từ Server
+      const name = app.customerName || app.CustomerName || "N/A";
+      const car = app.carName || app.CarName || "N/A";
+      const status = app.status || app.Status || "Chờ xử lý";
+      const date = app.appointmentDate || app.AppointmentDate || "N/A";
 
-  apps.forEach(app => {
-    if (app.Status === "Đã xử lý") done++;
-    if (app.Status === "Đã hủy") cancel++;
+      if (status === "Đã xử lý") done++;
+      if (status === "Đã hủy") cancel++;
 
-    const appointmentDate = app.date || app.Date || app.AppointmentDate || "Không rõ";
-
-    // 2. LOGIC NÚT BẤM
-    let actionButtons = "";
-    if (app.Status === "Chờ xử lý") {
-        // Đang chờ -> Hiện nút Duyệt và Hủy
+      let actionButtons = "";
+      if (status === "Chờ xử lý") {
         actionButtons = `
-          <button class="btn btn-success btn-sm" onclick="updateStatus(${app.AppointmentId}, 'Đã xử lý')">Duyệt</button>
-          <button class="btn btn-danger btn-sm" onclick="updateStatus(${app.AppointmentId}, 'Đã hủy')">Hủy</button>
+          <button class="btn btn-success btn-sm" onclick="updateStatus(${app.appointmentId || app.AppointmentId}, 'Đã xử lý')">Duyệt</button>
+          <button class="btn btn-danger btn-sm" onclick="updateStatus(${app.appointmentId || app.AppointmentId}, 'Đã hủy')">Hủy</button>
         `;
-    } else {
-        // Đã chốt -> Khóa lại và hiện nút Mở Khóa (trả về trạng thái Chờ xử lý)
+      } else {
         actionButtons = `
           <button class="btn btn-secondary btn-sm" disabled>Đã chốt</button>
-          <button class="btn btn-outline-info btn-sm fw-bold" onclick="updateStatus(${app.AppointmentId}, 'Chờ xử lý')">
+          <button class="btn btn-outline-info btn-sm fw-bold" onclick="updateStatus(${app.appointmentId || app.AppointmentId}, 'Chờ xử lý')">
              Sửa (Mở khóa)
           </button>
         `;
-    }
+      }
 
-    html += `
-      <tr>
-        <td>${app.CustomerName}</td>
-        <td>${app.CarName}</td>
-        <td>${appointmentDate}</td>
-        <td><span class="badge ${app.Status === 'Chờ xử lý' ? 'bg-warning text-dark' : (app.Status === 'Đã xử lý' ? 'bg-success' : 'bg-danger')}">${app.Status}</span></td>
-        <td>
-          ${actionButtons}
-        </td>
-      </tr>
-    `;
-  });
+      html += `
+        <tr>
+          <td>${name}</td>
+          <td>${car}</td>
+          <td>${date}</td>
+          <td>
+            <span class="badge ${status === 'Chờ xử lý' ? 'bg-warning text-dark' : (status === 'Đã xử lý' ? 'bg-success' : 'bg-danger')}">
+                ${status}
+            </span>
+          </td>
+          <td>${actionButtons}</td>
+        </tr>
+      `;
+    });
 
-  document.getElementById("doneCount").innerText = done;
-  document.getElementById("cancelCount").innerText = cancel;
-  document.getElementById("appointmentTable").innerHTML = html;
+    document.getElementById("doneCount").innerText = done;
+    document.getElementById("cancelCount").innerText = cancel;
+    document.getElementById("appointmentTable").innerHTML = html;
+
+  } catch (err) {
+    console.error("Lỗi khi tải lịch hẹn:", err);
+  }
 }
 
 // ====================\
 // DUYỆT / HỦY LỊCH HẸN
 // ====================\
 async function updateStatus(id, status) {
-  await fetch(API_URL/appointments/id/status, {
+  await fetch(`${API_APPOINTMENT}/${id}`, { 
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ status })
+    body: JSON.stringify({ status: status })
   });
   loadAppointments();
 }
